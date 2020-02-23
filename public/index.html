@@ -1,28 +1,87 @@
 <html>
-<head>
-<link rel="manifest" href="manifest.json" />
-<!-- ios support -->
-<meta name="apple-mobile-web-app-status-bar" content="#db4938" />
-<meta name="theme-color" content="#db4938" />
-    
-    
-</head>    
+    <head>
+        <meta charset="utf-8">
+        <title>Bootstrap + Firebase + PWA</title>         
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+        <link rel="manifest" href="manifest.json" />
+        <meta name="apple-mobile-web-app-status-bar" content="#db4938" />
+        <meta name="theme-color" content="#db4938" />
+    </head>    
     
 <body>
-    <main><h1>Title H1</h1>
-    <p>I left him in a suspended animation kennel. Einstein never knew I was gone! (gets out of the car) Marty! What in the name of Sir Isaac H Newton happened here? Oh yeah, Doc, listen, my kid showed up, all hell broke loose. Your kid? Great Scott, the sleep inducer! (Doc sits down. During the following Biff sneaks behind the DeLorean and listens in, unseen.) Because I used it on Jennifer there wasn't enough power left to knock your son out for the full hour. Damn!</p>
-    </main>
-    
+
+    <div class="container-fluid mt-5">
+        <div class='row'>
+            <div class='col-sm-12 col-md-10 mx-auto text-center'>
+                <main>  
+                    <h1>Offline alert testing</h1>
+                    <p>This is an example page. Some data are loaded trought the server and cached on your device. Try to reload the page and you should see that the data are not loaded from the server anymore.</p>
+                    <p>Now, turn your device connectivity off and refresh the page. Surprised?</p>
+                    <div id='someOnlineStuff'></div>
+                </main>
+            </div>
+        </div>
+        
+    </div>
+        
     <!-- The core Firebase JS SDK is always required and must be listed first -->
     <script src="/__/firebase/7.8.2/firebase-app.js"></script>
     <script src="/__/firebase/init.js"></script>
+    <script src="/__/firebase/7.8.2/firebase-firestore.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
-    <script src="https://www.w3schools.com/lib/w3.js"></script>
     <script src="js/app.js"></script>
     
+    <script>
+        
+    //This enables offline persistance of firestore data    
+    firebase.firestore().enablePersistence().catch(function(err) {
+        if (err.code == 'failed-precondition') {
+            console.log('failed_preconditions');
+        } else if (err.code == 'unimplemented') {
+          console.log('browser does not support caching');
+        }
+    });
+
+    function mainLoop(){
+            
+    //https://firebase.google.com/docs/firestore/manage-data/enable-offline
+    //In this example, data are loaded from an online firestore database and cached locally.
+        var db = firebase.firestore();
+        
+        db.collection("test").onSnapshot({ includeMetadataChanges: true }, function(snapshot) {
+          snapshot.docChanges().forEach(function(change) {
+              if (change.type === "added") {
+                  var source = snapshot.metadata.fromCache ? "local cache" : "server";
+                  console.log("Data came from " + source);
+                  document.getElementById('someOnlineStuff').innerHTML += '<p>'+change.doc.data().test + ', loaded from: '+source+'</p>';
+              }
+          });
+        });
+        
+        //If the user is online, we want him/her to add a new line to the database 
+        
+        if(window.navigator.onLine == true){
+            db.collection("test").add({
+                test: Math.random().toString(36).slice(-5)
+            }).then(function(docRef) {
+                document.body.innerHTML = '<div class="alert alert-success" role="alert">A new entry has been added to the database!</div>' + document.body.innerHTML;
+            }).catch(function(error) {
+                console.error("Error adding document: ", error);
+            });
+            
+        }
+        
+        
+        
+    };
+            
+    document.addEventListener('DOMContentLoaded', function() {
+        mainLoop();
+    });
     
+    </script>
 </body>
 </html>
